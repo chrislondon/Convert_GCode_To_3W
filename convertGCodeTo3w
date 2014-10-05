@@ -1,0 +1,48 @@
+#!/bin/bash
+
+[ $# -eq 0 ] && { echo "Usage: $0 argument"; exit 1; }
+
+out=${1%%.gcode}.3w
+
+# XYZ headers
+echo "; filename = $out
+; machine = daVinciF10
+; material = default
+; layer_height = 0.22
+; fill_density = 0.10
+; shells = 3
+; speed = 60
+; total_layers = 124
+; total_filament = 1
+; dimension = 51.23:45.21:24.95
+; extruder = 1" > "$out";
+
+inHeader=true;
+
+while read line
+do
+    name=$line
+
+    # Skip any empty lines
+    if [[ -z "$name" ]] ; then
+        continue;
+    fi
+
+    # Skip slic3r headers
+    if [ "$inHeader" = true -a ${name:0:1} == ";" ] ; then
+        continue;
+    fi
+
+    if [ "$inHeader" = true ] ; then
+        inHeader=false;
+    fi
+
+    echo "$name" >> "$out"
+done < $1
+
+# Copy $out to $out.bak
+mv "$out" "$out".bak
+# Use openssl to base64 encode $out.bak to $out
+openssl base64 -in "$out".bak  -out $out
+# Remove $out.bak
+rm "$out".bak
